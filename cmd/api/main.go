@@ -16,8 +16,12 @@ func main() {
 	service := port.NewService(repo)
 	handler := httphandler.NewPort(service)
 
+	httpPort := os.Getenv("PORT")
+
+	log.Printf("Running service on port: %s\n", httpPort)
+
 	http.Handle("/ports", handler)
-	if err := http.ListenAndServe(":"+os.Getenv("PORT"), nil); err != nil {
+	if err := http.ListenAndServe(":"+httpPort, nil); err != nil {
 		log.Fatal(err)
 	}
 }
