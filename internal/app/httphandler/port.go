@@ -22,20 +22,43 @@ func NewPort(s portService) *Port {
 func (h *Port) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req.ParseMultipartForm(200 << 20)
 
-	file, _, _ := req.FormFile("ports")
+	file, _, err := req.FormFile("ports")
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	defer file.Close()
 
 	dec := json.NewDecoder(file)
 
 	// checks the first object delimiter
-	_, _ = dec.Token()
+	_, err = dec.Token()
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	for dec.More() {
-		portID, _ := dec.Token()
+		portID, err := dec.Token()
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
 		var p port.Port
-		_ = dec.Decode(&p)
+		if err = dec.Decode(&p); err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 
-		h.service.Upsert(portID.(string), p)
+		if err := h.service.Upsert(portID.(string), p); err != nil {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
+}
+
+func respondWithError(w http.ResponseWriter, statusCode int, msg string) {
+	w.WriteHeader(statusCode)
+	w.Write([]byte(msg))
 }
