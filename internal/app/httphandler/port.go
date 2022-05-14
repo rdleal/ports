@@ -25,10 +25,17 @@ func (h *Port) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	file, _, _ := req.FormFile("ports")
 	defer file.Close()
 
-	ports := make(map[string]port.Port)
-	json.NewDecoder(file).Decode(&ports)
+	dec := json.NewDecoder(file)
 
-	for portID, port := range ports {
-		h.service.Upsert(portID, port)
+	// checks the first object delimiter
+	_, _ = dec.Token()
+
+	for dec.More() {
+		portID, _ := dec.Token()
+
+		var p port.Port
+		_ = dec.Decode(&p)
+
+		h.service.Upsert(portID.(string), p)
 	}
 }
